@@ -1,0 +1,44 @@
+name: Tag on PR Merge
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+jobs:
+  tag:
+    name: Create version tag
+    # Only run when the PR was actually merged (not just closed)
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-tags: true
+
+      - name: Determine bump type from PR labels
+        id: bump
+        env:
+          LABELS: ${{ toJson(github.event.pull_request.labels) }}
+        run: |
+          names=$(echo "$LABELS" | jq -r '.[].name')
+          if echo "$names" | grep -qx "major"; then
+            echo "type=major" >> "$GITHUB_OUTPUT"
+          elif echo "$names" | grep -qx "minor"; then
+            echo "type=minor" >> "$GITHUB_OUTPUT"
+          else
+            echo "type=patch" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Configure git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Create version tags
+        env:
+          BUMP: ${{ steps.bump.outputs.type }}
+        run: bash .github/scripts/tags.sh "$BUMP"

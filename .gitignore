@@ -3,3 +3,5 @@ dist/
 packages/shared/dist/
 coverage/
 *.js.map
+*.tsbuildinfo
+.rollup.cache/
