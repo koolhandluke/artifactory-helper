@@ -1,0 +1,133 @@
+name: Integration Test
+
+# Only manually triggered. Requires 'integration' environment approval before
+# secrets are exposed — protecting against accidental or malicious runs.
+on:
+  workflow_dispatch:
+    inputs:
+      artifactory-base-path:
+        description: 'Override ARTIFACTORY_BUILD_ARTIFACTS_PATH (default: sample-actions-artifact)'
+        required: false
+        default: 'sample-actions-artifact'
+
+# Prevent concurrent runs hammering the trial instance.
+concurrency:
+  group: integration-test
+  cancel-in-progress: true
+
+jobs:
+  integration-test:
+    name: Upload & Download Integration Test
+    runs-on: ubuntu-latest
+    # Requires manual approval in GitHub UI before this job starts.
+    # Set up: Settings → Environments → integration → required reviewers.
+    environment: integration
+    env:
+      ARTIFACTORY_BUILD_ARTIFACTS_PATH: ${{ inputs.artifactory-base-path || 'sample-actions-artifact' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build actions
+        run: npm run build
+
+      - name: Setup JFrog CLI
+        uses: jfrog/setup-jfrog-cli@v4
+        env:
+          # Repo variable: https://trialtoc5j0.jfrog.io
+          JF_URL: ${{ vars.ARTIFACTORY_URL }}
+          JF_ACCESS_TOKEN: ${{ secrets.ARTIFACTORY_TOKEN }}
+
+      - name: Ping Artifactory
+        run: jf rt ping
+
+      # ── Create test files ────────────────────────────────────────────────────
+      - name: Create test files
+        run: |
+          mkdir -p test-artifacts/nested
+          echo "run=${{ github.run_id }}" > test-artifacts/file-a.txt
+          echo "nested content run=${{ github.run_id }}" > test-artifacts/nested/file-b.txt
+
+      # ── Upload ───────────────────────────────────────────────────────────────
+      - name: Upload artifacts
+        uses: ./upload
+        with:
+          files: test-artifacts/file-a.txt, test-artifacts/nested/file-b.txt
+
+      # ── Test 1: download entire folder to output-dir (no `files` input) ─────
+      # flat=true (default) so all files land directly in output-dir/
+      - name: Download full folder
+        uses: ./download
+        with:
+          output-dir: downloaded-all
+
+      - name: Verify full folder download
+        run: |
+          echo "=== Downloaded files ==="
+          find downloaded-all -type f
+          test -f downloaded-all/file-a.txt || { echo "ERROR: file-a.txt missing"; exit 1; }
+          test -f downloaded-all/file-b.txt || { echo "ERROR: file-b.txt missing"; exit 1; }
+          grep "run=${{ github.run_id }}" downloaded-all/file-a.txt || { echo "ERROR: content mismatch in file-a.txt"; exit 1; }
+          echo "✓ Full folder download verified"
+
+      # ── Test 2: download specific file by path ───────────────────────────────
+      # When `files` is set, output-dir is ignored — each file is downloaded to
+      # its artifact sub-path relative to GITHUB_WORKSPACE.
+      - name: Remove local file before download (Test 2)
+        run: rm test-artifacts/file-a.txt
+
+      - name: Download specific file
+        uses: ./download
+        with:
+          files: test-artifacts/file-a.txt
+
+      - name: Verify specific file download
+        run: |
+          echo "=== Downloaded files ==="
+          find test-artifacts -type f
+          test -f test-artifacts/file-a.txt || { echo "ERROR: file-a.txt missing"; exit 1; }
+          grep "run=${{ github.run_id }}" test-artifacts/file-a.txt || { echo "ERROR: content mismatch"; exit 1; }
+          echo "✓ Specific file download verified"
+
+      # ── Test 3: upload and download multiple files ───────────────────────────
+      - name: Create multiple test files
+        run: |
+          mkdir -p multi-artifacts
+          echo "multi-file-c run=${{ github.run_id }}" > multi-artifacts/file-c.txt
+          echo "multi-file-d run=${{ github.run_id }}" > multi-artifacts/file-d.txt
+          echo "multi-file-e run=${{ github.run_id }}" > multi-artifacts/file-e.txt
+
+      - name: Upload multiple files
+        uses: ./upload
+        with:
+          files: multi-artifacts/file-c.txt, multi-artifacts/file-d.txt, multi-artifacts/file-e.txt
+
+      - name: Remove local files before download (Test 3)
+        run: rm multi-artifacts/file-c.txt multi-artifacts/file-d.txt multi-artifacts/file-e.txt
+
+      - name: Download multiple files
+        uses: ./download
+        with:
+          files: multi-artifacts/file-c.txt; multi-artifacts/file-d.txt; multi-artifacts/file-e.txt
+
+      - name: Verify multiple file download
+        run: |
+          echo "=== Downloaded files ==="
+          find multi-artifacts -type f
+          test -f multi-artifacts/file-c.txt || { echo "ERROR: file-c.txt missing"; exit 1; }
+          test -f multi-artifacts/file-d.txt || { echo "ERROR: file-d.txt missing"; exit 1; }
+          test -f multi-artifacts/file-e.txt || { echo "ERROR: file-e.txt missing"; exit 1; }
+          grep "multi-file-c run=${{ github.run_id }}" multi-artifacts/file-c.txt || { echo "ERROR: content mismatch in file-c.txt"; exit 1; }
+          grep "multi-file-d run=${{ github.run_id }}" multi-artifacts/file-d.txt || { echo "ERROR: content mismatch in file-d.txt"; exit 1; }
+          grep "multi-file-e run=${{ github.run_id }}" multi-artifacts/file-e.txt || { echo "ERROR: content mismatch in file-e.txt"; exit 1; }
+          echo "✓ Multiple file download verified"
