@@ -11,9 +11,17 @@ export async function run(): Promise<void> {
     const artifactoryPath = getArtifactoryPath(
       core.getInput('artifactory-path') || undefined,
     );
+
+    const folder = core.getInput('folder');
+
+    if (folder) {
+      core.info(`Uploading folder: ${folder}/* → ${artifactoryPath}/`);
+      await exec('jfrog', ['rt', 'upload', `${folder}/*`, `${artifactoryPath}/`]);
+      return;
+    }
+
     const filesArray = parseInputAsArray('files');
 
-    // if empty: warn and return
     if (filesArray.length === 0) {
       core.warning('No valid files provided. Skipping spec file creation.');
       return;

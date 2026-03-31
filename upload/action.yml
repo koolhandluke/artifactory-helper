@@ -2,6 +2,9 @@ name: 'Upload to Artifactory'
 description: 'Upload artifacts to Artifactory'
 author: 'kmorfis'
 inputs:
+  folder:
+    description: 'Upload all files in this folder (uses "folder/*" glob — takes priority over files)'
+    required: false
   files:
     description: 'Files to upload (space, comma, or semicolon separated)'
     required: false

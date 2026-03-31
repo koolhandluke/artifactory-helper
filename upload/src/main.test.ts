@@ -11,66 +11,113 @@ vi.mock('@artifactory-helper/shared');
 vi.mock('./spec-file/index.js');
 
 describe('run', () => {
-  it('should setFailed when getArtifactoryPath throws', async () => {
-    vi.mocked(shared.parseInputAsArray).mockReturnValue(['file1.txt']);
-    vi.mocked(shared.getArtifactoryPath).mockImplementation(() => {
-      throw new Error('GITHUB_REPOSITORY not set');
+  describe('folder mode', () => {
+    it('uploads folder/* directly when folder input is set', async () => {
+      vi.mocked(core.getInput).mockImplementation((name) =>
+        name === 'folder' ? 'my-build-output' : '',
+      );
+      vi.mocked(shared.getArtifactoryPath).mockReturnValue(
+        'webex-actions-generic/build-artifacts/owner/repo/123',
+      );
+
+      await run();
+
+      expect(exec).toHaveBeenCalledWith('jfrog', [
+        'rt',
+        'upload',
+        'my-build-output/*',
+        'webex-actions-generic/build-artifacts/owner/repo/123/',
+      ]);
+      expect(createSpecFile).not.toHaveBeenCalled();
     });
 
-    await run();
+    it('folder mode skips spec file even if files is also set', async () => {
+      vi.mocked(core.getInput).mockImplementation((name) => {
+        if (name === 'folder') return 'dist';
+        if (name === 'files') return 'some-file.txt';
+        return '';
+      });
+      vi.mocked(shared.getArtifactoryPath).mockReturnValue('path/to/target');
+      vi.mocked(shared.parseInputAsArray).mockReturnValue(['some-file.txt']);
 
-    expect(vi.mocked(core.setFailed)).toHaveBeenCalledWith(
-      'GITHUB_REPOSITORY not set',
-    );
+      await run();
+
+      expect(exec).toHaveBeenCalledWith('jfrog', [
+        'rt',
+        'upload',
+        'dist/*',
+        'path/to/target/',
+      ]);
+      expect(createSpecFile).not.toHaveBeenCalled();
+    });
   });
 
-  it('should return when no files are provided', async () => {
-    vi.mocked(shared.getArtifactoryPath).mockReturnValue('destination');
-    vi.mocked(shared.parseInputAsArray).mockReturnValue([]);
+  describe('files mode', () => {
+    it('should setFailed when getArtifactoryPath throws', async () => {
+      vi.mocked(core.getInput).mockReturnValue('');
+      vi.mocked(shared.parseInputAsArray).mockReturnValue(['file1.txt']);
+      vi.mocked(shared.getArtifactoryPath).mockImplementation(() => {
+        throw new Error('GITHUB_REPOSITORY not set');
+      });
 
-    await run();
+      await run();
 
-    expect(core.warning).toHaveBeenCalledWith(
-      'No valid files provided. Skipping spec file creation.',
-    );
-  });
+      expect(vi.mocked(core.setFailed)).toHaveBeenCalledWith(
+        'GITHUB_REPOSITORY not set',
+      );
+    });
 
-  it('should setFailed when writing the spec file fails', async () => {
-    vi.mocked(shared.getArtifactoryPath).mockReturnValue('destination');
-    vi.mocked(shared.parseInputAsArray).mockReturnValue([
-      'file1.txt',
-      'file2.txt',
-    ]);
-    vi.mocked(writeFileSpec).mockRejectedValue(
-      new Error('Failed to write spec file'),
-    );
+    it('should warn when no files are provided', async () => {
+      vi.mocked(core.getInput).mockReturnValue('');
+      vi.mocked(shared.getArtifactoryPath).mockReturnValue('destination');
+      vi.mocked(shared.parseInputAsArray).mockReturnValue([]);
 
-    await run();
+      await run();
 
-    expect(createSpecFile).toHaveBeenCalledWith('destination', [
-      'file1.txt',
-      'file2.txt',
-    ]);
-    expect(core.info).toHaveBeenCalledWith('Files parsed: file1.txt,file2.txt');
-    expect(core.setFailed).toHaveBeenCalledWith('Failed to write spec file');
-  });
+      expect(core.warning).toHaveBeenCalledWith(
+        'No valid files provided. Skipping spec file creation.',
+      );
+    });
 
-  it('should run happy path', async () => {
-    vi.mocked(shared.getArtifactoryPath).mockReturnValue('destination');
-    vi.mocked(shared.parseInputAsArray).mockReturnValue([
-      'file1.txt',
-      'file2.txt',
-    ]);
-    vi.mocked(createSpecFile).mockReturnValue({ files: [] });
-    vi.mocked(writeFileSpec).mockResolvedValue('/path/to/spec-file.json');
+    it('should setFailed when writing the spec file fails', async () => {
+      vi.mocked(core.getInput).mockReturnValue('');
+      vi.mocked(shared.getArtifactoryPath).mockReturnValue('destination');
+      vi.mocked(shared.parseInputAsArray).mockReturnValue([
+        'file1.txt',
+        'file2.txt',
+      ]);
+      vi.mocked(writeFileSpec).mockRejectedValue(
+        new Error('Failed to write spec file'),
+      );
 
-    await run();
+      await run();
 
-    expect(exec).toHaveBeenCalledWith('jfrog', [
-      'rt',
-      'upload',
-      '--spec',
-      '/path/to/spec-file.json',
-    ]);
+      expect(createSpecFile).toHaveBeenCalledWith('destination', [
+        'file1.txt',
+        'file2.txt',
+      ]);
+      expect(core.info).toHaveBeenCalledWith('Files parsed: file1.txt,file2.txt');
+      expect(core.setFailed).toHaveBeenCalledWith('Failed to write spec file');
+    });
+
+    it('should upload via spec file on happy path', async () => {
+      vi.mocked(core.getInput).mockReturnValue('');
+      vi.mocked(shared.getArtifactoryPath).mockReturnValue('destination');
+      vi.mocked(shared.parseInputAsArray).mockReturnValue([
+        'file1.txt',
+        'file2.txt',
+      ]);
+      vi.mocked(createSpecFile).mockReturnValue({ files: [] });
+      vi.mocked(writeFileSpec).mockResolvedValue('/path/to/spec-file.json');
+
+      await run();
+
+      expect(exec).toHaveBeenCalledWith('jfrog', [
+        'rt',
+        'upload',
+        '--spec',
+        '/path/to/spec-file.json',
+      ]);
+    });
   });
 });
