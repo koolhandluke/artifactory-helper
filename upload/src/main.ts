@@ -16,7 +16,12 @@ export async function run(): Promise<void> {
 
     if (folder) {
       core.info(`Uploading folder: ${folder}/* → ${artifactoryPath}/`);
-      await exec('jfrog', ['rt', 'upload', `${folder}/*`, `${artifactoryPath}/`]);
+      await exec('jfrog', [
+        'rt',
+        'upload',
+        `${folder}/*`,
+        `${artifactoryPath}/`,
+      ]);
       return;
     }
 

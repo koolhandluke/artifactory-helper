@@ -96,7 +96,9 @@ describe('run', () => {
         'file1.txt',
         'file2.txt',
       ]);
-      expect(core.info).toHaveBeenCalledWith('Files parsed: file1.txt,file2.txt');
+      expect(core.info).toHaveBeenCalledWith(
+        'Files parsed: file1.txt,file2.txt',
+      );
       expect(core.setFailed).toHaveBeenCalledWith('Failed to write spec file');
     });
 
