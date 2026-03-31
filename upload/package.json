@@ -1,0 +1,15 @@
+{
+  "name": "upload",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "rollup -c rollup.config.ts --configPlugin @rollup/plugin-typescript"
+  },
+  "dependencies": {
+    "@actions/core": "^1.11.1",
+    "@actions/exec": "^1.1.1",
+    "@artifactory-helper/shared": "*"
+  }
+}

@@ -1,0 +1,13 @@
+name: 'Upload to Artifactory'
+description: 'Upload artifacts to Artifactory'
+author: 'kmorfis'
+inputs:
+  files:
+    description: 'Files to upload (space, comma, or semicolon separated)'
+    required: false
+  artifactory-path:
+    description: 'Override the default path (owner/repo/run_id) with a fixed folder name'
+    required: false
+runs:
+  using: 'node20'
+  main: 'dist/index.js'

@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": ["ES2022"],
+    "strict": true,
+    "noImplicitAny": true,
+    "noUnusedLocals": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "newLine": "lf"
+  },
+  "files": [],
+  "references": [
+    { "path": "./packages/shared" },
+    { "path": "./upload" },
+    { "path": "./download" }
+  ]
+}

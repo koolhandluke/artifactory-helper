@@ -1,0 +1,21 @@
+name: 'Download from Artifactory'
+description: 'Download artifacts from Artifactory'
+author: 'kmorfis'
+inputs:
+  files:
+    description: 'Artifact paths (space, comma, semicolon, or JSON array)'
+    required: false
+  artifactory-path:
+    description: 'Override the default download path'
+    required: false
+  output-dir:
+    description: 'Local directory to download into'
+    required: false
+    default: 'download-artifact-dir'
+  flat:
+    description: 'Enable --flat mode for JFrog CLI'
+    required: false
+    default: 'true'
+runs:
+  using: 'node20'
+  main: 'dist/index.js'
