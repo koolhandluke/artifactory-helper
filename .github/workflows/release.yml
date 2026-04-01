@@ -31,7 +31,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add upload/dist download/dist
+          git add --force upload/dist download/dist
           git commit -m "chore: add dist for release ${{ github.event.release.tag_name }}"
           git tag -fa ${{ github.event.release.tag_name }} -m "Release ${{ github.event.release.tag_name }}"
           git push origin ${{ github.event.release.tag_name }} --force
