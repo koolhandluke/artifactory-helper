@@ -1,3 +1,4 @@
+import { stat } from 'node:fs/promises';
 import * as core from '@actions/core';
 import { exec } from '@actions/exec';
 import {
@@ -5,6 +6,21 @@ import {
   parseInputAsArray,
 } from '@artifactory-helper/shared';
 import { createSpecFile, writeFileSpec } from './spec-file/index.js';
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+async function getFileSize(filePath: string): Promise<number> {
+  try {
+    const { size } = await stat(filePath);
+    return size;
+  } catch {
+    return 0;
+  }
+}
 
 export async function run(): Promise<void> {
   try {
@@ -33,12 +49,38 @@ export async function run(): Promise<void> {
     }
 
     core.info(`Files parsed: ${filesArray}`);
+
+    const fileSizes = await Promise.all(
+      filesArray.map(async (file) => ({
+        file,
+        size: await getFileSize(file),
+      })),
+    );
+
     const fileSpec = createSpecFile(artifactoryPath, filesArray);
     const fileSpecPath = await writeFileSpec(fileSpec);
 
     core.info(`Filespec created at: ${fileSpecPath}`);
 
     await exec('jfrog', ['rt', 'upload', '--spec', fileSpecPath]);
+
+    const totalBytes = fileSizes.reduce((sum, { size }) => sum + size, 0);
+    await core.summary
+      .addHeading('Artifactory Upload')
+      .addTable([
+        [
+          { data: 'File', header: true },
+          { data: 'Size', header: true },
+          { data: 'Target', header: true },
+        ],
+        ...fileSizes.map(({ file, size }) => [
+          file,
+          formatBytes(size),
+          `${artifactoryPath}/${file}`,
+        ]),
+        ['**Total**', formatBytes(totalBytes), ''],
+      ])
+      .write();
   } catch (error) {
     if (error instanceof Error) {
       core.setFailed(`${error.message}`);
