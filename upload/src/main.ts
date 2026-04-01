@@ -66,20 +66,9 @@ export async function run(): Promise<void> {
 
     const totalBytes = fileSizes.reduce((sum, { size }) => sum + size, 0);
     await core.summary
-      .addHeading('Artifactory Upload')
-      .addTable([
-        [
-          { data: 'File', header: true },
-          { data: 'Size', header: true },
-          { data: 'Target', header: true },
-        ],
-        ...fileSizes.map(({ file, size }) => [
-          file,
-          formatBytes(size),
-          `${artifactoryPath}/${file}`,
-        ]),
-        ['**Total**', formatBytes(totalBytes), ''],
-      ])
+      .addRaw(
+        `Uploaded ${filesArray.length} file${filesArray.length === 1 ? '' : 's'} (${formatBytes(totalBytes)}) to \`${artifactoryPath}\``,
+      )
       .write();
   } catch (error) {
     if (error instanceof Error) {

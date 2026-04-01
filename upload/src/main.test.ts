@@ -58,15 +58,13 @@ describe('run', () => {
 
   describe('files mode', () => {
     let summaryMock: {
-      addHeading: ReturnType<typeof vi.fn>;
-      addTable: ReturnType<typeof vi.fn>;
+      addRaw: ReturnType<typeof vi.fn>;
       write: ReturnType<typeof vi.fn>;
     };
 
     beforeEach(() => {
       summaryMock = {
-        addHeading: vi.fn().mockReturnThis(),
-        addTable: vi.fn().mockReturnThis(),
+        addRaw: vi.fn().mockReturnThis(),
         write: vi.fn().mockResolvedValue(undefined),
       };
       Object.defineProperty(core, 'summary', {
@@ -146,7 +144,7 @@ describe('run', () => {
       expect(summaryMock.write).toHaveBeenCalled();
     });
 
-    it('writes upload summary with file sizes and targets', async () => {
+    it('writes upload summary with total count and size', async () => {
       vi.mocked(core.getInput).mockReturnValue('');
       vi.mocked(shared.getArtifactoryPath).mockReturnValue(
         'my-repo/owner/repo/42',
@@ -166,18 +164,8 @@ describe('run', () => {
 
       await run();
 
-      expect(summaryMock.addHeading).toHaveBeenCalledWith('Artifactory Upload');
-      expect(summaryMock.addTable).toHaveBeenCalledWith(
-        expect.arrayContaining([
-          expect.arrayContaining([{ data: 'File', header: true }]),
-          [
-            'dist/app.tar.gz',
-            '2.0 KB',
-            'my-repo/owner/repo/42/dist/app.tar.gz',
-          ],
-          ['dist/app.war', '512 B', 'my-repo/owner/repo/42/dist/app.war'],
-          ['**Total**', '2.5 KB', ''],
-        ]),
+      expect(summaryMock.addRaw).toHaveBeenCalledWith(
+        'Uploaded 2 files (2.5 KB) to `my-repo/owner/repo/42`',
       );
     });
 
@@ -191,11 +179,8 @@ describe('run', () => {
 
       await run();
 
-      expect(summaryMock.addTable).toHaveBeenCalledWith(
-        expect.arrayContaining([
-          ['missing.txt', '0 B', 'destination/missing.txt'],
-          ['**Total**', '0 B', ''],
-        ]),
+      expect(summaryMock.addRaw).toHaveBeenCalledWith(
+        'Uploaded 1 file (0 B) to `destination`',
       );
     });
   });
