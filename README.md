@@ -1,114 +1,240 @@
-# artifactory-helper
+# Artifactory Helper
 
-A monorepo of GitHub Actions for uploading and downloading artifacts to/from JFrog Artifactory.
+GitHub Actions for uploading and downloading build artifacts to/from JFrog Artifactory — with predictable paths and zero per-workflow setup.
 
-## Actions
+GitHub Actions' built-in artifact actions are ephemeral and tied to a single workflow run. When you need to share build outputs across workflows, repos, or retain them beyond 90 days, you need external storage.
 
-| Action | Description |
-|--------|-------------|
-| [`upload/`](./upload/) | Upload artifacts to Artifactory |
-| [`download/`](./download/) | Download artifacts from Artifactory |
+artifactory-helper gives you a consistent, path-predictable way to upload and download artifacts from JFrog Artifactory. The artifact path is auto-derived from GITHUB_REPOSITORY and GITHUB_RUN_ID, so uploads and downloads just work across jobs without manual coordination.
 
-### Artifact path format
+---
 
-Both actions share the same default Artifactory path convention:
+## Quick start
+
+```yaml
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup JFrog CLI
+        uses: jfrog/setup-jfrog-cli@v4
+        env:
+          JF_URL: ${{ vars.ARTIFACTORY_URL }}
+          JF_ACCESS_TOKEN: ${{ secrets.ARTIFACTORY_TOKEN }}
+
+      - name: Build
+        run: ./gradlew build
+
+      - name: Upload artifacts
+        uses: koolhandluke/artifactory-helper/upload@v1
+        with:
+          folder: build/libs
+```
+
+---
+
+## Configuration
+
+### Credentials
+
+Set up JFrog CLI before using either action:
+
+```yaml
+- uses: jfrog/setup-jfrog-cli@v4
+  env:
+    JF_URL: ${{ vars.ARTIFACTORY_URL }}
+    JF_ACCESS_TOKEN: ${{ secrets.ARTIFACTORY_TOKEN }}
+```
+
+| Name | Description |
+|------|-------------|
+| `JF_URL` | JFrog instance URL (e.g. `https://your-org.jfrog.io`) |
+| `JF_ACCESS_TOKEN` | Access token with read/write permissions |
+
+---
+
+### Artifact path
+
+Default path:
 
 ```
 <ARTIFACTORY_BUILD_ARTIFACTS_PATH>/<GITHUB_REPOSITORY>/<GITHUB_RUN_ID>/
 ```
 
-Where `ARTIFACTORY_BUILD_ARTIFACTS_PATH` defaults to `webex-actions-generic/build-artifacts`.
+| Name | Type | Default |
+|------|------|--------|
+| `ARTIFACTORY_BUILD_ARTIFACTS_PATH` | env var | `webex-actions-generic/build-artifacts` |
 
-Override `ARTIFACTORY_BUILD_ARTIFACTS_PATH` as an env var or use the `artifactory-path` input to replace the run-id segment with a fixed folder name.
+#### Overrides
+
+- Set `ARTIFACTORY_BUILD_ARTIFACTS_PATH` → change base path
+- Set `artifactory-path` input → replace `<run-id>` with a fixed value
+
+Example:
+
+```yaml
+with:
+  artifactory-path: my-stable-folder
+```
 
 ---
 
-## Upload to Artifactory
-
-### Inputs
-
-| Name | Description | Required | Default |
-|------|-------------|----------|---------|
-| `files` | Files to upload — space, comma, or semicolon separated. Supports JSON array format. | No | |
-| `artifactory-path` | Override the run-id segment of the path with a fixed folder name. | No | |
+## Upload
 
 ### Examples
 
-**Upload all files in a directory:**
+**Upload a folder:**
 
 ```yaml
-- uses: your-org/artifactory-helper/upload@v1
+- uses: jfrog/setup-jfrog-cli@v4
+  env:
+    JF_URL: ${{ vars.ARTIFACTORY_URL }}
+    JF_ACCESS_TOKEN: ${{ secrets.ARTIFACTORY_TOKEN }}
+
+- uses: koolhandluke/artifactory-helper/upload@v1
+  with:
+    folder: build/libs
 ```
 
 **Upload specific files:**
 
 ```yaml
-- uses: your-org/artifactory-helper/upload@v1
+- uses: koolhandluke/artifactory-helper/upload@v1
   with:
-    files: "server/build/libs/app.tar.gz, server/build/libs/app.war"
+    files: "build/app.tar.gz, build/app.war"
 ```
 
-**Upload to a fixed path (e.g. for sharing between workflows):**
+**Upload to shared path:**
 
 ```yaml
-- uses: your-org/artifactory-helper/upload@v1
+- uses: koolhandluke/artifactory-helper/upload@v1
   with:
-    artifactory-path: my-stable-folder
+    artifactory-path: shared-build
 ```
+
+### Parameters
+
+| Name | Description | Required |
+|------|-------------|----------|
+| `folder` | Upload all files in folder (`folder/*`) | No |
+| `files` | Files to upload (comma/space/semicolon separated) | No |
+| `artifactory-path` | Override run-id segment | No |
+
+### Input precedence
+
+- If `folder` is set → `files` is ignored
 
 ---
 
-## Download from Artifactory
-
-### Inputs
-
-| Name | Description | Required | Default |
-|------|-------------|----------|---------|
-| `files` | Artifact paths to download — space, comma, or semicolon separated. When set, `output-dir` is ignored and each file is placed at its artifact path. | No | |
-| `artifactory-path` | Override the run-id segment of the source path with a fixed folder name. | No | |
-| `output-dir` | Local directory to download into. Ignored when `files` is set. | No | `download-artifact-dir` |
-| `flat` | Set to `false` to preserve folder structure. When `true`, all files go into `output-dir`. | No | `true` |
+## Download
 
 ### Examples
 
-**Download everything from a run:**
+**Download all artifacts from a run:**
 
 ```yaml
-- uses: your-org/artifactory-helper/download@v1
+- uses: jfrog/setup-jfrog-cli@v4
+  env:
+    JF_URL: ${{ vars.ARTIFACTORY_URL }}
+    JF_ACCESS_TOKEN: ${{ secrets.ARTIFACTORY_TOKEN }}
+
+- uses: koolhandluke/artifactory-helper/download@v1
   with:
-    output-dir: my-artifacts
+    output-dir: artifacts
+```
+
+**Preserve folder structure:**
+
+```yaml
+- uses: koolhandluke/artifactory-helper/download@v1
+  with:
+    output-dir: artifacts
+    flat: "false"
 ```
 
 **Download specific files:**
 
 ```yaml
-- uses: your-org/artifactory-helper/download@v1
+- uses: koolhandluke/artifactory-helper/download@v1
   with:
-    files: "server/build/libs/app.tar.gz, server/build/libs/app.war"
+    files: "build/app.tar.gz, build/app.war"
 ```
 
-**Download from a fixed path (matching a fixed upload path):**
+**Download from shared path:**
 
 ```yaml
-- uses: your-org/artifactory-helper/download@v1
+- uses: koolhandluke/artifactory-helper/download@v1
   with:
-    artifactory-path: my-stable-folder
-    output-dir: my-artifacts
+    artifactory-path: shared-build
+    output-dir: artifacts
 ```
 
-### Troubleshooting
+### Parameters
 
-If artifacts are not downloading, verify the path is correct using the JFrog CLI directly:
+| Name | Description | Default |
+|------|-------------|--------|
+| `files` | Specific artifact paths to download | |
+| `artifactory-path` | Override run-id segment | |
+| `output-dir` | Target directory | `download-artifact-dir` |
+| `flat` | Flatten directory structure | `true` |
+
+### Input precedence
+
+- If `files` is set → `output-dir` is ignored; each file is downloaded to its artifact sub-path
+
+---
+
+## Troubleshooting
+
+### Common issues
+
+**Auth errors**
+- Verify `JF_URL` and `JF_ACCESS_TOKEN`
+- Ensure `jfrog/setup-jfrog-cli` runs before these actions
+
+**No files downloaded**
+- Ensure path is correct
+- Ensure trailing `/` is included
+
+**Unexpected file layout**
+- Check `flat` setting
+
+---
+
+### Debug with JFrog CLI
 
 ```bash
 jf rt dl "webex-actions-generic/build-artifacts/<org>/<repo>/<run-id>/" --flat=true download-artifact-dir/
 ls -ltr download-artifact-dir/
 ```
 
-> The trailing slash `/` on the Artifactory path and output directory is required. Without it, JFrog CLI either downloads nothing or uses the first filename as the directory name.
+> The trailing `/` is required. Without it, downloads may fail or behave incorrectly.
+
+---
+
+## When to use this
+
+Use this action when:
+- you need artifacts across workflows
+- you need retention beyond 90 days
+- you want deterministic artifact paths
+- you already use JFrog Artifactory
+
+Not ideal when:
+- artifacts are only needed within a single workflow
+
+---
+
+## Actions
+
+| Action | Description |
+|--------|-------------|
+| [`upload/`](./upload/) | Upload artifacts |
+| [`download/`](./download/) | Download artifacts |
 
 ---
 
 ## Contributing
 
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for development setup, testing, and the release process.
+See [CONTRIBUTING.md](./CONTRIBUTING.md)
