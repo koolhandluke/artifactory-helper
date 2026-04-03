@@ -8,8 +8,14 @@ inputs:
   files:
     description: 'Files to upload (space, comma, or semicolon separated)'
     required: false
-  artifactory-path:
-    description: 'Override the default path (owner/repo/run_id) with a fixed folder name'
+  publish-build-info:
+    description: 'Publish JFrog build info (git metadata + GitHub env). Overrides ARTIFACTORY_PUBLISH_BUILD_INFO env var.'
+    required: false
+  build-name:
+    description: 'JFrog build name. Defaults to GITHUB_REPOSITORY.'
+    required: false
+  build-number:
+    description: 'JFrog build number. Defaults to GITHUB_RUN_NUMBER.'
     required: false
 runs:
   using: 'node20'

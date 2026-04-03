@@ -24,9 +24,7 @@ async function getFileSize(filePath: string): Promise<number> {
 
 export async function run(): Promise<void> {
   try {
-    const artifactoryPath = getArtifactoryPath(
-      core.getInput('artifactory-path') || undefined,
-    );
+    const artifactoryPath = getArtifactoryPath();
 
     const folder = core.getInput('folder');
 
@@ -57,19 +55,45 @@ export async function run(): Promise<void> {
       })),
     );
 
+    // Resolve build info flag: input takes priority over env var
+    const publishBuildInfoInput = core.getInput('publish-build-info');
+    const publishBuildInfo =
+      publishBuildInfoInput !== ''
+        ? publishBuildInfoInput === 'true'
+        : process.env.ARTIFACTORY_PUBLISH_BUILD_INFO === 'true';
+
+    const buildName =
+      core.getInput('build-name') || process.env.GITHUB_REPOSITORY || '';
+    const buildNumber =
+      core.getInput('build-number') || process.env.GITHUB_RUN_NUMBER || '';
+
     const fileSpec = createSpecFile(artifactoryPath, filesArray);
     const fileSpecPath = await writeFileSpec(fileSpec);
 
     core.info(`Filespec created at: ${fileSpecPath}`);
 
-    await exec('jfrog', ['rt', 'upload', '--spec', fileSpecPath]);
+    const uploadArgs = ['rt', 'upload', '--spec', fileSpecPath];
+    if (publishBuildInfo) {
+      uploadArgs.push('--build-name', buildName, '--build-number', buildNumber);
+    }
+
+    await exec('jfrog', uploadArgs);
+
+    if (publishBuildInfo) {
+      await exec('jfrog', ['rt', 'build-add-git', buildName, buildNumber]);
+      await exec('jfrog', ['rt', 'build-publish', buildName, buildNumber]);
+    }
 
     const totalBytes = fileSizes.reduce((sum, { size }) => sum + size, 0);
-    await core.summary
-      .addRaw(
-        `Uploaded ${filesArray.length} file${filesArray.length === 1 ? '' : 's'} (${formatBytes(totalBytes)}) to \`${artifactoryPath}\``,
-      )
-      .write();
+    const summaryBuilder = core.summary.addRaw(
+      `Uploaded ${filesArray.length} file${filesArray.length === 1 ? '' : 's'} (${formatBytes(totalBytes)}) to \`${artifactoryPath}\``,
+    );
+    if (publishBuildInfo) {
+      summaryBuilder.addRaw(
+        `\nBuild info published: \`${buildName}\` #\`${buildNumber}\``,
+      );
+    }
+    await summaryBuilder.write();
   } catch (error) {
     if (error instanceof Error) {
       core.setFailed(`${error.message}`);
