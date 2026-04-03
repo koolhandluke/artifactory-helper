@@ -5,8 +5,8 @@ name: Integration Test
 on:
   workflow_dispatch:
     inputs:
-      artifactory-base-path:
-        description: 'Override ARTIFACTORY_BUILD_ARTIFACTS_PATH (default: sample-actions-artifact)'
+      artifactory-repo:
+        description: 'Override JF_ARTIFACTS_REPO (default: sample-actions-artifact)'
         required: false
         default: 'sample-actions-artifact'
 
@@ -23,24 +23,10 @@ jobs:
     # Set up: Settings → Environments → integration → required reviewers.
     environment: integration
     env:
-      ARTIFACTORY_BUILD_ARTIFACTS_PATH: ${{ inputs.artifactory-base-path || 'sample-actions-artifact' }}
+      JF_ARTIFACTS_REPO: ${{ inputs.artifactory-repo || 'sample-actions-artifact' }}
+      ARTIFACTORY_PUBLISH_BUILD_INFO: 'true'
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build actions
-        run: npm run build
-
       - name: Setup JFrog CLI
         uses: jfrog/setup-jfrog-cli@v4
         env:
@@ -60,14 +46,14 @@ jobs:
 
       # ── Upload ───────────────────────────────────────────────────────────────
       - name: Upload artifacts
-        uses: ./upload
+        uses: koolhandluke/artifactory-helper/upload@v1
         with:
           files: test-artifacts/file-a.txt, test-artifacts/nested/file-b.txt
 
       # ── Test 1: download entire folder to output-dir (no `files` input) ─────
       # flat=true (default) so all files land directly in output-dir/
       - name: Download full folder
-        uses: ./download
+        uses: koolhandluke/artifactory-helper/download@v1
         with:
           output-dir: downloaded-all
 
@@ -87,7 +73,7 @@ jobs:
         run: rm test-artifacts/file-a.txt
 
       - name: Download specific file
-        uses: ./download
+        uses: koolhandluke/artifactory-helper/download@v1
         with:
           files: test-artifacts/file-a.txt
 
@@ -108,7 +94,7 @@ jobs:
           echo "multi-file-e run=${{ github.run_id }}" > multi-artifacts/file-e.txt
 
       - name: Upload multiple files
-        uses: ./upload
+        uses: koolhandluke/artifactory-helper/upload@v1
         with:
           files: multi-artifacts/file-c.txt, multi-artifacts/file-d.txt, multi-artifacts/file-e.txt
 
@@ -116,7 +102,7 @@ jobs:
         run: rm multi-artifacts/file-c.txt multi-artifacts/file-d.txt multi-artifacts/file-e.txt
 
       - name: Download multiple files
-        uses: ./download
+        uses: koolhandluke/artifactory-helper/download@v1
         with:
           files: multi-artifacts/file-c.txt; multi-artifacts/file-d.txt; multi-artifacts/file-e.txt
 
