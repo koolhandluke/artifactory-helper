@@ -97,6 +97,7 @@ export async function run(): Promise<void> {
   } catch (error) {
     if (error instanceof Error) {
       core.setFailed(`${error.message}`);
+      return;
     }
     core.setFailed(`${error}`);
   }
