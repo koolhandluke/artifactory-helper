@@ -231,6 +231,16 @@ describe('run', () => {
           'owner/repo',
           '42',
         ]);
+        expect(exec).toHaveBeenCalledWith('jfrog', [
+          'rt',
+          'upload',
+          '--spec',
+          '/path/to/spec.json',
+          '--build-name',
+          'owner/repo',
+          '--build-number',
+          '42',
+        ]);
       });
 
       it('input false overrides ARTIFACTORY_PUBLISH_BUILD_INFO=true env var', async () => {
