@@ -183,5 +183,147 @@ describe('run', () => {
         'Uploaded 1 file (0 B) to `destination`',
       );
     });
+
+    describe('build info', () => {
+      it('does not call build-add-git or build-publish when disabled', async () => {
+        vi.mocked(core.getInput).mockImplementation((name) => {
+          if (name === 'publish-build-info') return 'false';
+          return '';
+        });
+        vi.mocked(shared.getArtifactoryPath).mockReturnValue('destination');
+        vi.mocked(shared.parseInputAsArray).mockReturnValue(['file.txt']);
+        vi.mocked(createSpecFile).mockReturnValue({ files: [] });
+        vi.mocked(writeFileSpec).mockResolvedValue('/path/to/spec.json');
+
+        await run();
+
+        expect(exec).not.toHaveBeenCalledWith(
+          'jfrog',
+          expect.arrayContaining(['build-add-git']),
+        );
+        expect(exec).not.toHaveBeenCalledWith(
+          'jfrog',
+          expect.arrayContaining(['build-publish']),
+        );
+      });
+
+      it('publishes build info when ARTIFACTORY_PUBLISH_BUILD_INFO env var is true', async () => {
+        vi.mocked(core.getInput).mockReturnValue('');
+        vi.stubEnv('ARTIFACTORY_PUBLISH_BUILD_INFO', 'true');
+        vi.stubEnv('GITHUB_REPOSITORY', 'owner/repo');
+        vi.stubEnv('GITHUB_RUN_NUMBER', '42');
+        vi.mocked(shared.getArtifactoryPath).mockReturnValue('destination');
+        vi.mocked(shared.parseInputAsArray).mockReturnValue(['file.txt']);
+        vi.mocked(createSpecFile).mockReturnValue({ files: [] });
+        vi.mocked(writeFileSpec).mockResolvedValue('/path/to/spec.json');
+
+        await run();
+
+        expect(exec).toHaveBeenCalledWith('jfrog', [
+          'rt',
+          'build-add-git',
+          'owner/repo',
+          '42',
+        ]);
+        expect(exec).toHaveBeenCalledWith('jfrog', [
+          'rt',
+          'build-publish',
+          'owner/repo',
+          '42',
+        ]);
+      });
+
+      it('input false overrides ARTIFACTORY_PUBLISH_BUILD_INFO=true env var', async () => {
+        vi.mocked(core.getInput).mockImplementation((name) => {
+          if (name === 'publish-build-info') return 'false';
+          return '';
+        });
+        vi.stubEnv('ARTIFACTORY_PUBLISH_BUILD_INFO', 'true');
+        vi.mocked(shared.getArtifactoryPath).mockReturnValue('destination');
+        vi.mocked(shared.parseInputAsArray).mockReturnValue(['file.txt']);
+        vi.mocked(createSpecFile).mockReturnValue({ files: [] });
+        vi.mocked(writeFileSpec).mockResolvedValue('/path/to/spec.json');
+
+        await run();
+
+        expect(exec).not.toHaveBeenCalledWith(
+          'jfrog',
+          expect.arrayContaining(['build-publish']),
+        );
+      });
+
+      it('uses custom build-name and build-number inputs', async () => {
+        vi.mocked(core.getInput).mockImplementation((name) => {
+          if (name === 'publish-build-info') return 'true';
+          if (name === 'build-name') return 'my-build';
+          if (name === 'build-number') return '99';
+          return '';
+        });
+        vi.mocked(shared.getArtifactoryPath).mockReturnValue('destination');
+        vi.mocked(shared.parseInputAsArray).mockReturnValue(['file.txt']);
+        vi.mocked(createSpecFile).mockReturnValue({ files: [] });
+        vi.mocked(writeFileSpec).mockResolvedValue('/path/to/spec.json');
+
+        await run();
+
+        expect(exec).toHaveBeenCalledWith('jfrog', [
+          'rt',
+          'build-add-git',
+          'my-build',
+          '99',
+        ]);
+        expect(exec).toHaveBeenCalledWith('jfrog', [
+          'rt',
+          'build-publish',
+          'my-build',
+          '99',
+        ]);
+      });
+
+      it('passes --build-name and --build-number to the upload spec command', async () => {
+        vi.mocked(core.getInput).mockImplementation((name) => {
+          if (name === 'publish-build-info') return 'true';
+          if (name === 'build-name') return 'my-build';
+          if (name === 'build-number') return '99';
+          return '';
+        });
+        vi.mocked(shared.getArtifactoryPath).mockReturnValue('destination');
+        vi.mocked(shared.parseInputAsArray).mockReturnValue(['file.txt']);
+        vi.mocked(createSpecFile).mockReturnValue({ files: [] });
+        vi.mocked(writeFileSpec).mockResolvedValue('/path/to/spec.json');
+
+        await run();
+
+        expect(exec).toHaveBeenCalledWith('jfrog', [
+          'rt',
+          'upload',
+          '--spec',
+          '/path/to/spec.json',
+          '--build-name',
+          'my-build',
+          '--build-number',
+          '99',
+        ]);
+      });
+
+      it('appends build info line to job summary', async () => {
+        vi.mocked(core.getInput).mockImplementation((name) => {
+          if (name === 'publish-build-info') return 'true';
+          if (name === 'build-name') return 'my-build';
+          if (name === 'build-number') return '99';
+          return '';
+        });
+        vi.mocked(shared.getArtifactoryPath).mockReturnValue('destination');
+        vi.mocked(shared.parseInputAsArray).mockReturnValue(['file.txt']);
+        vi.mocked(createSpecFile).mockReturnValue({ files: [] });
+        vi.mocked(writeFileSpec).mockResolvedValue('/path/to/spec.json');
+
+        await run();
+
+        expect(summaryMock.addRaw).toHaveBeenCalledWith(
+          '\nBuild info published: `my-build` #`99`',
+        );
+      });
+    });
   });
 });
