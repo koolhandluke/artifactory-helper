@@ -9,13 +9,12 @@ vi.mock('@artifactory-helper/shared');
 
 describe('download-from-artifactory', () => {
   const setupEnv = () => {
-    vi.stubEnv('GITHUB_REPOSITORY', 'webex-shared-actions/some-git-repo');
+    vi.stubEnv('GITHUB_REPOSITORY', 'acme-corp/some-repo');
     vi.stubEnv('GITHUB_RUN_ID', '12233445566');
-    vi.stubEnv(
-      'ARTIFACTORY_BUILD_ARTIFACTS_PATH',
-      'webex-actions-generic-local/build-artifacts',
-    );
+    vi.stubEnv('JF_ARTIFACTS_REPO', 'build-artifacts');
   };
+
+  const mockPath = 'build-artifacts/acme-corp/some-repo/runs/12233445566';
 
   const mockRunCliAndGetOutput = (fail?: (args: string[]) => boolean) => {
     vi.mocked(shared.runCliAndGetOutput).mockImplementation(
@@ -36,15 +35,11 @@ describe('download-from-artifactory', () => {
           return 'true';
         case 'output-dir':
           return 'download-artifact-dir';
-        case 'artifactory-path':
-          return '';
         default:
           return '';
       }
     });
-    vi.mocked(shared.getArtifactoryPath).mockReturnValue(
-      'webex-actions-generic-local/build-artifacts/webex-shared-actions/some-git-repo/12233445566',
-    );
+    vi.mocked(shared.getArtifactoryPath).mockReturnValue(mockPath);
     vi.mocked(shared.parseInputAsArray).mockReturnValue(['folder/file.txt']);
     vi.mocked(shared.isEmpty).mockReturnValue(false);
     vi.mocked(shared.getWorkingDirectory).mockReturnValue('/workspace');
@@ -52,16 +47,10 @@ describe('download-from-artifactory', () => {
 
     await run();
 
-    const expectedArgs = [
-      'rt',
-      'dl',
-      '--flat=true',
-      'webex-actions-generic-local/build-artifacts/webex-shared-actions/some-git-repo/12233445566/folder/file.txt',
-      'folder/file.txt',
-    ];
-    expect(shared.runCliAndGetOutput).toHaveBeenCalledWith(expectedArgs, {
-      cwd: '/workspace',
-    });
+    expect(shared.runCliAndGetOutput).toHaveBeenCalledWith(
+      ['rt', 'dl', '--flat=true', `${mockPath}/folder/file.txt`, 'folder/file.txt'],
+      { cwd: '/workspace' },
+    );
   });
 
   it('Multiple Files', async () => {
@@ -72,15 +61,11 @@ describe('download-from-artifactory', () => {
           return 'true';
         case 'output-dir':
           return 'download-artifact-dir';
-        case 'artifactory-path':
-          return '';
         default:
           return '';
       }
     });
-    vi.mocked(shared.getArtifactoryPath).mockReturnValue(
-      'webex-actions-generic-local/build-artifacts/webex-shared-actions/some-git-repo/12233445566',
-    );
+    vi.mocked(shared.getArtifactoryPath).mockReturnValue(mockPath);
     vi.mocked(shared.parseInputAsArray).mockReturnValue([
       'folder/file.zip',
       'folder/file.tar.gz',
@@ -98,7 +83,7 @@ describe('download-from-artifactory', () => {
       'rt',
       'dl',
       '--flat=true',
-      'webex-actions-generic-local/build-artifacts/webex-shared-actions/some-git-repo/12233445566/folder/file.zip',
+      `${mockPath}/folder/file.zip`,
       'folder/file.zip',
     ]);
   });
@@ -111,15 +96,11 @@ describe('download-from-artifactory', () => {
           return 'true';
         case 'output-dir':
           return 'some-output-dir';
-        case 'artifactory-path':
-          return '';
         default:
           return '';
       }
     });
-    vi.mocked(shared.getArtifactoryPath).mockReturnValue(
-      'webex-actions-generic-local/build-artifacts/webex-shared-actions/some-git-repo/12233445566',
-    );
+    vi.mocked(shared.getArtifactoryPath).mockReturnValue(mockPath);
     vi.mocked(shared.parseInputAsArray).mockReturnValue([]);
     vi.mocked(shared.isEmpty).mockReturnValue(false);
     vi.mocked(shared.getWorkingDirectory).mockReturnValue('/workspace');
@@ -128,13 +109,7 @@ describe('download-from-artifactory', () => {
     await run();
 
     expect(shared.runCliAndGetOutput).toHaveBeenCalledWith(
-      [
-        'rt',
-        'dl',
-        '--flat=true',
-        'webex-actions-generic-local/build-artifacts/webex-shared-actions/some-git-repo/12233445566/',
-        'some-output-dir/',
-      ],
+      ['rt', 'dl', '--flat=true', `${mockPath}/`, 'some-output-dir/'],
       { cwd: '/workspace' },
     );
   });
@@ -147,15 +122,11 @@ describe('download-from-artifactory', () => {
           return 'true';
         case 'output-dir':
           return '';
-        case 'artifactory-path':
-          return '';
         default:
           return '';
       }
     });
-    vi.mocked(shared.getArtifactoryPath).mockReturnValue(
-      'webex-actions-generic-local/build-artifacts/webex-shared-actions/some-git-repo/12233445566',
-    );
+    vi.mocked(shared.getArtifactoryPath).mockReturnValue(mockPath);
     vi.mocked(shared.parseInputAsArray).mockReturnValue([]);
     vi.mocked(shared.isEmpty).mockReturnValue(false);
     vi.mocked(shared.getWorkingDirectory).mockReturnValue('/workspace');
@@ -164,13 +135,7 @@ describe('download-from-artifactory', () => {
     await run();
 
     expect(shared.runCliAndGetOutput).toHaveBeenCalledWith(
-      [
-        'rt',
-        'dl',
-        '--flat=true',
-        'webex-actions-generic-local/build-artifacts/webex-shared-actions/some-git-repo/12233445566/',
-        './',
-      ],
+      ['rt', 'dl', '--flat=true', `${mockPath}/`, './'],
       { cwd: '/workspace' },
     );
   });
@@ -183,15 +148,11 @@ describe('download-from-artifactory', () => {
           return 'true';
         case 'output-dir':
           return '';
-        case 'artifactory-path':
-          return '';
         default:
           return '';
       }
     });
-    vi.mocked(shared.getArtifactoryPath).mockReturnValue(
-      'webex-actions-generic-local/build-artifacts/webex-shared-actions/some-git-repo/12233445566',
-    );
+    vi.mocked(shared.getArtifactoryPath).mockReturnValue(mockPath);
     vi.mocked(shared.parseInputAsArray).mockReturnValue([
       'INVALID_ARTIFACTORY_PATH',
     ]);
@@ -216,15 +177,11 @@ describe('download-from-artifactory', () => {
           return 'false';
         case 'output-dir':
           return 'out';
-        case 'artifactory-path':
-          return '';
         default:
           return '';
       }
     });
-    vi.mocked(shared.getArtifactoryPath).mockReturnValue(
-      'webex-actions-generic-local/build-artifacts/webex-shared-actions/some-git-repo/12233445566',
-    );
+    vi.mocked(shared.getArtifactoryPath).mockReturnValue(mockPath);
     vi.mocked(shared.parseInputAsArray).mockReturnValue(['file.txt']);
     vi.mocked(shared.isEmpty).mockReturnValue(false);
     vi.mocked(shared.getWorkingDirectory).mockReturnValue('/workspace');

@@ -4,7 +4,7 @@ GitHub Actions for uploading and downloading build artifacts to/from JFrog Artif
 
 GitHub Actions' built-in artifact actions are ephemeral and tied to a single workflow run. When you need to share build outputs across workflows, repos, or retain them beyond 90 days, you need external storage.
 
-artifactory-helper gives you a consistent, path-predictable way to upload and download artifacts from JFrog Artifactory. The artifact path is auto-derived from GITHUB_REPOSITORY and GITHUB_RUN_ID, so uploads and downloads just work across jobs without manual coordination.
+artifactory-helper gives you a consistent, path-predictable way to upload and download artifacts from JFrog Artifactory. The artifact path is auto-derived from your repository and run ID, so uploads and downloads just work across jobs without manual coordination.
 
 ---
 
@@ -56,26 +56,27 @@ Set up JFrog CLI before using either action:
 
 ### Artifact path
 
-Default path:
+Artifacts are stored at a predictable path derived from your GitHub context:
 
 ```
-<ARTIFACTORY_BUILD_ARTIFACTS_PATH>/<GITHUB_REPOSITORY>/<GITHUB_RUN_ID>/
+<JF_ARTIFACTS_REPO>/<github-org>/<github-repo>/runs/<GITHUB_RUN_ID>/
+```
+
+For example, a run of `acme-corp/my-app` with run ID `12345678` stored in `my-artifactory-repo`:
+
+```
+my-artifactory-repo/acme-corp/my-app/runs/12345678/
 ```
 
 | Name | Type | Default |
 |------|------|--------|
-| `ARTIFACTORY_BUILD_ARTIFACTS_PATH` | env var | `webex-actions-generic/build-artifacts` |
+| `JF_ARTIFACTS_REPO` | env var | `build-artifacts` |
 
-#### Overrides
-
-- Set `ARTIFACTORY_BUILD_ARTIFACTS_PATH` → change base path
-- Set `artifactory-path` input → replace `<run-id>` with a fixed value
-
-Example:
+Set `JF_ARTIFACTS_REPO` in your workflow env to change the Artifactory repository:
 
 ```yaml
-with:
-  artifactory-path: my-stable-folder
+env:
+  JF_ARTIFACTS_REPO: my-artifactory-repo
 ```
 
 ---
@@ -105,21 +106,12 @@ with:
     files: "build/app.tar.gz, build/app.war"
 ```
 
-**Upload to shared path:**
-
-```yaml
-- uses: koolhandluke/artifactory-helper/upload@v1
-  with:
-    artifactory-path: shared-build
-```
-
 ### Parameters
 
 | Name | Description | Required |
 |------|-------------|----------|
 | `folder` | Upload all files in folder (`folder/*`) | No |
 | `files` | Files to upload (comma/space/semicolon separated) | No |
-| `artifactory-path` | Override run-id segment | No |
 
 ### Input precedence
 
@@ -161,21 +153,11 @@ with:
     files: "build/app.tar.gz, build/app.war"
 ```
 
-**Download from shared path:**
-
-```yaml
-- uses: koolhandluke/artifactory-helper/download@v1
-  with:
-    artifactory-path: shared-build
-    output-dir: artifacts
-```
-
 ### Parameters
 
 | Name | Description | Default |
 |------|-------------|--------|
 | `files` | Specific artifact paths to download | |
-| `artifactory-path` | Override run-id segment | |
 | `output-dir` | Target directory | `download-artifact-dir` |
 | `flat` | Flatten directory structure | `true` |
 
@@ -205,7 +187,7 @@ with:
 ### Debug with JFrog CLI
 
 ```bash
-jf rt dl "webex-actions-generic/build-artifacts/<org>/<repo>/<run-id>/" --flat=true download-artifact-dir/
+jf rt dl "build-artifacts/<org>/<repo>/runs/<run-id>/" --flat=true download-artifact-dir/
 ls -ltr download-artifact-dir/
 ```
 

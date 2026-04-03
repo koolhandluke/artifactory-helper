@@ -20,9 +20,7 @@ export async function run(): Promise<void> {
     core.startGroup('Downloading artifact from Artifactory');
 
     const downloadPath = core.getInput('output-dir') || '.';
-    const artifactoryPath = getArtifactoryPath(
-      core.getInput('artifactory-path') || undefined,
-    );
+    const artifactoryPath = getArtifactoryPath();
     const artifactoryPaths = parseInputAsArray('files');
 
     core.debug(`Called action with value ${artifactoryPath}`);

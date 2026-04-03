@@ -2,8 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createSpecFile } from './create.js';
 
 describe('createSpecFile', () => {
-  const artifactoryPath =
-    'webex-actions-generic/build-artifacts/org/repo/1.0.0';
+  const artifactoryPath = 'build-artifacts/org/repo/runs/1.0.0';
 
   it('creates a FileSpec with correct targets', () => {
     const files = ['a.txt', 'b.js'];

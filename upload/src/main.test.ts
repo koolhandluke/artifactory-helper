@@ -21,7 +21,7 @@ describe('run', () => {
         name === 'folder' ? 'my-build-output' : '',
       );
       vi.mocked(shared.getArtifactoryPath).mockReturnValue(
-        'webex-actions-generic/build-artifacts/owner/repo/123',
+        'build-artifacts/owner/repo/runs/123',
       );
 
       await run();
@@ -30,7 +30,7 @@ describe('run', () => {
         'rt',
         'upload',
         'my-build-output/*',
-        'webex-actions-generic/build-artifacts/owner/repo/123/',
+        'build-artifacts/owner/repo/runs/123/',
       ]);
       expect(createSpecFile).not.toHaveBeenCalled();
     });

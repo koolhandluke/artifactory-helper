@@ -5,9 +5,6 @@ inputs:
   files:
     description: 'Artifact paths (space, comma, semicolon, or JSON array)'
     required: false
-  artifactory-path:
-    description: 'Override the default download path'
-    required: false
   output-dir:
     description: 'Local directory to download into'
     required: false
