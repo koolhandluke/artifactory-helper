@@ -48,7 +48,13 @@ describe('download-from-artifactory', () => {
     await run();
 
     expect(shared.runCliAndGetOutput).toHaveBeenCalledWith(
-      ['rt', 'dl', '--flat=true', `${mockPath}/folder/file.txt`, 'folder/file.txt'],
+      [
+        'rt',
+        'dl',
+        '--flat=true',
+        `${mockPath}/folder/file.txt`,
+        'folder/file.txt',
+      ],
       { cwd: '/workspace' },
     );
   });
