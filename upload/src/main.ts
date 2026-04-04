@@ -57,7 +57,7 @@ export async function run(): Promise<void> {
 
     // Resolve build info flag: input takes priority over env var
     const publishBuildInfoInput = core.getInput('publish-build-info');
-    const publishBuildInfo =
+    let publishBuildInfo =
       publishBuildInfoInput !== ''
         ? publishBuildInfoInput === 'true'
         : process.env.ARTIFACTORY_PUBLISH_BUILD_INFO === 'true';
@@ -66,6 +66,13 @@ export async function run(): Promise<void> {
       core.getInput('build-name') || process.env.GITHUB_REPOSITORY || '';
     const buildNumber =
       core.getInput('build-number') || process.env.GITHUB_RUN_NUMBER || '';
+
+    if (publishBuildInfo && (!buildName || !buildNumber)) {
+      core.warning(
+        'Skipping build info: build-name and build-number (or GITHUB_REPOSITORY and GITHUB_RUN_NUMBER) must be set.',
+      );
+      publishBuildInfo = false;
+    }
 
     const fileSpec = createSpecFile(artifactoryPath, filesArray);
     const fileSpecPath = await writeFileSpec(fileSpec);

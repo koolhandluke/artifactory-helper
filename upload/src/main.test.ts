@@ -316,6 +316,39 @@ describe('run', () => {
         ]);
       });
 
+      it('warns and skips build info when build-name or build-number cannot be resolved', async () => {
+        vi.mocked(core.getInput).mockImplementation((name) => {
+          if (name === 'publish-build-info') return 'true';
+          return '';
+        });
+        // No GITHUB_REPOSITORY or GITHUB_RUN_NUMBER in env
+        vi.mocked(shared.getArtifactoryPath).mockReturnValue('destination');
+        vi.mocked(shared.parseInputAsArray).mockReturnValue(['file.txt']);
+        vi.mocked(createSpecFile).mockReturnValue({ files: [] });
+        vi.mocked(writeFileSpec).mockResolvedValue('/path/to/spec.json');
+
+        await run();
+
+        expect(core.warning).toHaveBeenCalledWith(
+          'Skipping build info: build-name and build-number (or GITHUB_REPOSITORY and GITHUB_RUN_NUMBER) must be set.',
+        );
+        expect(exec).not.toHaveBeenCalledWith(
+          'jfrog',
+          expect.arrayContaining(['build-add-git']),
+        );
+        expect(exec).not.toHaveBeenCalledWith(
+          'jfrog',
+          expect.arrayContaining(['build-publish']),
+        );
+        // Upload still proceeds (without build flags)
+        expect(exec).toHaveBeenCalledWith('jfrog', [
+          'rt',
+          'upload',
+          '--spec',
+          '/path/to/spec.json',
+        ]);
+      });
+
       it('appends build info line to job summary', async () => {
         vi.mocked(core.getInput).mockImplementation((name) => {
           if (name === 'publish-build-info') return 'true';
