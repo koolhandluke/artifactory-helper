@@ -50,8 +50,13 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Create version tags
+        id: create_tags
         env:
           # On workflow_dispatch: use the explicit input.
           # On PR merge: use the label-derived output.
           BUMP: ${{ inputs.bump || steps.bump.outputs.type }}
         run: bash .github/scripts/tags.sh "$BUMP"
+
+      - name: Write job summary
+        run: |
+          echo "## 🏷️ Tagged \`${{ steps.create_tags.outputs.version }}\`" >> "$GITHUB_STEP_SUMMARY"
