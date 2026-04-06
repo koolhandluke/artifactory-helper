@@ -349,6 +349,37 @@ describe('run', () => {
         ]);
       });
 
+      it('warns and still publishes when build-add-git fails (e.g. no .git dir)', async () => {
+        vi.mocked(core.getInput).mockImplementation((name) => {
+          if (name === 'publish-build-info') return 'true';
+          if (name === 'build-name') return 'my-build';
+          if (name === 'build-number') return '99';
+          return '';
+        });
+        vi.mocked(shared.getArtifactoryPath).mockReturnValue('destination');
+        vi.mocked(shared.parseInputAsArray).mockReturnValue(['file.txt']);
+        vi.mocked(createSpecFile).mockReturnValue({ files: [] });
+        vi.mocked(writeFileSpec).mockResolvedValue('/path/to/spec.json');
+        vi.mocked(exec).mockImplementation(async (_cmd, args) => {
+          if (args?.includes('build-add-git'))
+            throw new Error('Could not find .git');
+          return 0;
+        });
+
+        await run();
+
+        expect(core.warning).toHaveBeenCalledWith(
+          'build-add-git failed (no .git?): Could not find .git',
+        );
+        expect(exec).toHaveBeenCalledWith('jfrog', [
+          'rt',
+          'build-publish',
+          'my-build',
+          '99',
+        ]);
+        expect(core.setFailed).not.toHaveBeenCalled();
+      });
+
       it('appends build info line to job summary', async () => {
         vi.mocked(core.getInput).mockImplementation((name) => {
           if (name === 'publish-build-info') return 'true';

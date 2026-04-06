@@ -87,7 +87,13 @@ export async function run(): Promise<void> {
     await exec('jfrog', uploadArgs);
 
     if (publishBuildInfo) {
-      await exec('jfrog', ['rt', 'build-add-git', buildName, buildNumber]);
+      try {
+        await exec('jfrog', ['rt', 'build-add-git', buildName, buildNumber]);
+      } catch (e) {
+        core.warning(
+          `build-add-git failed (no .git?): ${e instanceof Error ? e.message : e}`,
+        );
+      }
       await exec('jfrog', ['rt', 'build-publish', buildName, buildNumber]);
     }
 
