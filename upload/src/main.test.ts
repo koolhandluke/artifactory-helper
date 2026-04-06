@@ -321,7 +321,8 @@ describe('run', () => {
           if (name === 'publish-build-info') return 'true';
           return '';
         });
-        // No GITHUB_REPOSITORY or GITHUB_RUN_NUMBER in env
+        vi.stubEnv('GITHUB_REPOSITORY', '');
+        vi.stubEnv('GITHUB_RUN_NUMBER', '');
         vi.mocked(shared.getArtifactoryPath).mockReturnValue('destination');
         vi.mocked(shared.parseInputAsArray).mockReturnValue(['file.txt']);
         vi.mocked(createSpecFile).mockReturnValue({ files: [] });
