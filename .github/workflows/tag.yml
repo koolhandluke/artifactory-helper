@@ -30,6 +30,7 @@ jobs:
           fetch-tags: true
 
       - name: Determine bump type from PR labels
+        if: github.event_name == 'pull_request'
         id: bump
         env:
           LABELS: ${{ toJson(github.event.pull_request.labels) }}
