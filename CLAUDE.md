@@ -25,7 +25,7 @@ npx vitest run packages/shared/src/__tests__/parse.test.ts
 npm run build
 ```
 
-> **Note:** `dist/` files are not committed to `main`. They are built and committed automatically by the `release.yml` workflow when a GitHub Release is published.
+> **Note:** `dist/` files are committed to `main`. Run `npm run build` before committing source changes.
 
 ## Architecture
 
@@ -52,5 +52,6 @@ Both actions use `rollup` to bundle everything (including shared) into a single 
 
 ## Release Flow
 
-1. Create a GitHub Release with a semver tag (e.g. `v1.2.3`)
-2. `release.yml` builds dist files, commits them to the tag, and updates the floating major tag (e.g. `v1`)
+1. Merge PR with `major`/`minor`/`patch` label (or run `tag.yml` manually)
+2. `tag.yml` creates `vX`, `vX.Y`, `vX.Y.Z` tags pointing at the commit that already has `dist/`
+3. (Optional) Create a GitHub Release on the tag for changelog/release notes
