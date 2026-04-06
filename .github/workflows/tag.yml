@@ -4,12 +4,22 @@ on:
   pull_request:
     types: [closed]
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: 'Version bump type'
+        required: true
+        type: choice
+        options: [patch, minor, major]
+        default: patch
 
 jobs:
   tag:
     name: Create version tag
-    # Only run when the PR was actually merged (not just closed)
-    if: github.event.pull_request.merged == true
+    # Allow both PR merges and manual dispatch
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -40,5 +50,7 @@ jobs:
 
       - name: Create version tags
         env:
-          BUMP: ${{ steps.bump.outputs.type }}
+          # On workflow_dispatch: use the explicit input.
+          # On PR merge: use the label-derived output.
+          BUMP: ${{ inputs.bump || steps.bump.outputs.type }}
         run: bash .github/scripts/tags.sh "$BUMP"
