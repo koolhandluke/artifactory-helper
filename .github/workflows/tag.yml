@@ -1,4 +1,4 @@
-name: Tag on PR Merge
+name: Tag
 
 on:
   pull_request:
