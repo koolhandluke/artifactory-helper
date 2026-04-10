@@ -1,4 +1,4 @@
-name: 'Upload to Artifactory'
+name: 'JFrog Artifactory Upload/Download'
 description: 'Upload artifacts to Artifactory'
 author: 'kmorfis'
 inputs:
