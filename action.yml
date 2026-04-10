@@ -1,5 +1,5 @@
-name: 'Upload to Artifactory'
-description: 'Upload artifacts to Artifactory'
+name: 'JFrog Artifactory Upload/Download'
+description: 'Upload and download build artifacts to/from JFrog Artifactory with predictable, path-based storage'
 author: 'kmorfis'
 inputs:
   folder:

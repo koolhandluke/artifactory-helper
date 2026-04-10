@@ -10,6 +10,8 @@ artifactory-helper gives you a consistent, path-predictable way to upload and do
 
 ## Quick start
 
+### Upload
+
 ```yaml
 jobs:
   build:
@@ -30,6 +32,25 @@ jobs:
         uses: koolhandluke/artifactory-helper/upload@v1
         with:
           folder: build/libs
+```
+
+### Download
+
+```yaml
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup JFrog CLI
+        uses: jfrog/setup-jfrog-cli@v4
+        env:
+          JF_URL: ${{ vars.ARTIFACTORY_URL }}
+          JF_ACCESS_TOKEN: ${{ secrets.ARTIFACTORY_TOKEN }}
+
+      - name: Download artifacts
+        uses: koolhandluke/artifactory-helper/download@v1
+        with:
+          output-dir: artifacts
 ```
 
 ---
