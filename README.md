@@ -1,4 +1,4 @@
-# Artifactory Helper
+# Upload/Download Artifacts from JFrog Artifactory 
 
 GitHub Actions for uploading and downloading build artifacts to/from JFrog Artifactory — with predictable paths and zero per-workflow setup.
 
